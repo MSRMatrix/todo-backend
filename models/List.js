@@ -1,8 +1,8 @@
-import { Schema, model } from "mongoose";
+import mongoose, { Schema, model } from "mongoose";
 
 const ListSchema = new Schema({
-    name: {type: String, required: true, unique: true},
-    task: [{type: String}]
+    name: {type: String, required: true},
+    task: [{ type: mongoose.Schema.Types.ObjectId, ref: "User"}]
 }, {versionKey: false, strictQuery: true})
 
 ListSchema.methods.toJSON = function() {

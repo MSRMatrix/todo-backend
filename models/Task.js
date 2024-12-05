@@ -1,7 +1,8 @@
 import { Schema, model } from "mongoose";
 
 const TaskSchema = new Schema({
-    task: [{type: String}]
+    task: {type: String},
+    done: {type: Boolean, default: false}
 }, {versionKey: false, strictQuery: true})
 
 TaskSchema.methods.toJSON = function() {

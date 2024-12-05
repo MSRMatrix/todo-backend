@@ -1,17 +1,18 @@
 import express from "express"
+import { allLists, createList, deleteList, updateList } from "../controller/listController"
 
 const router = express.Router()
 
 router
-.route("/").get()
+.route("/").get(allLists)
 
 router
-.route("/").post()
+.route("/").post(createList)
 
 router
-.route("/").delete()
+.route("/").delete(deleteList)
 
 router
-.route("/").patch()
+.route("/").patch(updateList)
 
 export default router;
