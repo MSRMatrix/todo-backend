@@ -35,7 +35,7 @@ export const createUser = async (req, res, next) => {
     }
 
     if (await User.findOne({ username: username })) {
-      return res.status(404).json({ message: "Username already exist!" });
+      return res.status(409).json({ message: "Username already exist!" });
     }
 
     const missingFields = [];
