@@ -1,19 +1,24 @@
 import express from "express"
 
-import { createUser, deleteUser, getUser, updateUser } from "../controller/UserController";
+import { authorize, createUser, deleteUser, getUserData, updateUser } from "../controller/UserController";
+import { userUpdateValidator, userValidator, validateRequest } from "../middlewares/validator/validatorFunctions";
 
 const router = express.Router()
 
 router
-.route("/").get(getUser)
+.route("/", authorize(["User"])).get(getUserData)
 
 router
-.route("/").post(createUser)
+.route("/").post(userValidator, validateRequest ,createUser)
 
 router
-.route("/").delete(deleteUser)
+.route("/", authorize(["User"])).delete(deleteUser)
 
 router
-.route("/").patch(updateUser)
+.route("/", authorize(["User"])).patch(userUpdateValidator([
+    "username",
+    "email",
+    "password",
+  ]), validateRequest ,updateUser)
 
 export default router;

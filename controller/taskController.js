@@ -1,27 +1,28 @@
 import List from "../models/List";
 import Task from "../models/Task";
-
-export const allTasks = async (req, res, next) => {
-  try {
-    res.status(200).json(await Task.find());
-  } catch (error) {
-    next(error);
-  }
-};
+import User from "../models/User";
 
 export const createTask = async (req, res, next) => {
   try {
     const task = req.body.task;
-    const listId = req.body.listId
-    
+    const listId = req.body.listId;
+    const list = await List.findById(listId)
+
+
     if (!task) {
       return res.status(400).json({ message: "A task need a name!" });
     }
 
+    const taskLength = await Task.find({_id : {$in: list.task}})
+
+    if(taskLength.length >= 4){
+      return res.status(518).json({message: "A maximum of 4 tasks is allowed!"})
+    }
+
     const newTask = await Task.create({ task: task, listId: listId });
 
-console.log(newTask);
-    const populatedTask = await Task.findById(newTask._id).populate('listId');
+    console.log(newTask);
+    const populatedTask = await Task.findById(newTask._id).populate("listId");
     await List.findByIdAndUpdate(listId, { $push: { task: newTask._id } });
 
     res.status(200).json({ message: "Task created!", name: populatedTask });
@@ -66,10 +67,22 @@ export const checkTask = async (req, res, next) => {
 
 export const deleteTask = async (req, res, next) => {
   try {
-    const id = req.body._id;
-    const deletedList = await Task.findByIdAndDelete({ _id: id });
+    const _id = req.body._id;
+    const listId = req.body.listId;
 
-    if (!(await Task.findById({ _id: id }))) {
+    const list = await List.findById(listId);
+
+    const deleteTaskInList = list.task.filter(
+      (item) => item.toString() !== _id
+    );
+
+    const deletedList = await Task.findByIdAndDelete({ _id: _id });
+
+    list.task = deleteTaskInList;
+
+    await list.save();
+
+    if (!(await Task.findById({ _id: _id }))) {
       return res.status(404).json({ message: "Task not found!" });
     }
     res.status(200).json({ message: "Task deleted!", name: deletedList });

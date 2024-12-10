@@ -1,18 +1,16 @@
 import express from "express"
-import { allLists, createList, deleteList, updateList } from "../controller/listController"
+import { createList, deleteList, updateList } from "../controller/listController"
+import { listValidator, validateRequest } from "../middlewares/validator/validatorFunctions"
 
 const router = express.Router()
 
 router
-.route("/").get(allLists)
-
-router
-.route("/").post(createList)
+.route("/").post(listValidator, validateRequest ,createList)
 
 router
 .route("/").delete(deleteList)
 
 router
-.route("/").patch(updateList)
+.route("/").patch(listValidator, validateRequest ,updateList)
 
 export default router;
