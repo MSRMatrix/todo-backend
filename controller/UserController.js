@@ -39,8 +39,8 @@ export const getUserData = async (req, res, next) => {
         return Task.find({ _id: { $in: list.task } });
       })
     );
-
-    res.status(200).json({ user: user, list: list, task: task });
+    console.log(task[0]);
+    res.status(200).json({ user: user, list: list, task: task[0] });
   } catch (error) {
     console.error("Error in getUser:", error);
     next(error);
@@ -186,7 +186,6 @@ export const login = async (req, res, next) => {
     }
 
     const data = email || username;
-    console.log(data);
     const token = issueJwt(data);
     res.cookie("jwt", token, {
       httpOnly: true,

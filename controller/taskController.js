@@ -4,6 +4,7 @@ import User from "../models/User.js";
 
 export const createTask = async (req, res, next) => {
   try {
+    
     const task = req.body.task;
     const listId = req.body.listId;
     const list = await List.findById(listId)
@@ -14,17 +15,17 @@ export const createTask = async (req, res, next) => {
     }
 
     const taskLength = await Task.find({_id : {$in: list.task}})
-
+console.log(taskLength.length);
     if(taskLength.length >= 4){
       return res.status(518).json({message: "A maximum of 4 tasks is allowed!"})
     }
 
     const newTask = await Task.create({ task: task, listId: listId });
 
-    console.log(newTask);
     const populatedTask = await Task.findById(newTask._id).populate("listId");
+    
     await List.findByIdAndUpdate(listId, { $push: { task: newTask._id } });
-
+   
     res.status(200).json({ message: "Task created!", name: populatedTask });
   } catch (error) {
     next(error);
@@ -75,16 +76,16 @@ export const deleteTask = async (req, res, next) => {
     const deleteTaskInList = list.task.filter(
       (item) => item.toString() !== _id
     );
-
+ if (!(await Task.findById({ _id: _id }))) {
+      return res.status(404).json({ message: "Task not found!" });
+    }
     const deletedList = await Task.findByIdAndDelete({ _id: _id });
 
     list.task = deleteTaskInList;
-
+console.log("test");
     await list.save();
 
-    if (!(await Task.findById({ _id: _id }))) {
-      return res.status(404).json({ message: "Task not found!" });
-    }
+   
     res.status(200).json({ message: "Task deleted!", name: deletedList });
   } catch (error) {
     next(error);

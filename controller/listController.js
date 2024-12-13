@@ -1,3 +1,4 @@
+import { comparePassword } from "../middlewares/hashPassword.js";
 import List from "../models/List.js";
 import Task from "../models/Task.js";
 import User from "../models/User.js";
@@ -97,8 +98,26 @@ export const deleteList = async (req, res, next) => {
   try {
     console.log("Deleting list...");
 
+    const token = req.cookies.jwt;
+
+    if (!token) {
+      const error = new Error("Token not found");
+      error.statusCode = 401;
+      throw error;
+    }
+    const decodedToken = jwt.verify(token, secretKey);
+
+    const testId = decodedToken.id;
+    const data = await User.findOne({ _id: testId });
+
+    if (!data) {
+      const error = new Error("Account not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
     const _id = req.body._id;
-    const userId = req.body.userId;
+    const userId = data._id;
     const password = req.body.password;
 
     const list = await List.findById(_id);
