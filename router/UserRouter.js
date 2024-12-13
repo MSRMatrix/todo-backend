@@ -1,12 +1,12 @@
 import express from "express"
 
-import { authorize, createUser, deleteUser, getUserData, login, updateUser } from "../controller/UserController";
-import { userUpdateValidator, userValidator, validateRequest } from "../middlewares/validator/validatorFunctions";
+import { authorize, createUser, deleteUser, getData, getUserData, login, updateUser } from "../controller/UserController.js";
+import { userUpdateValidator, userValidator, validateRequest } from "../middlewares/validator/validatorFunctions.js";
 
 const router = express.Router()
 
 router
-.route("/", authorize(["User"])).get(getUserData)
+.route("/").get(getUserData)
 
 router
 .route("/").post(userValidator, validateRequest ,createUser)
@@ -23,6 +23,9 @@ router
     "email",
     "password",
   ]), validateRequest ,updateUser)
+
+router
+.route("/get-data").get(getData)
 
 
 

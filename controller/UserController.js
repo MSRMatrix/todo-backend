@@ -1,15 +1,33 @@
-import User from "../models/User";
+import User from "../models/User.js";
 import List from "../models/List.js";
 import Task from "../models/Task.js";
 import { hashPassword, comparePassword } from "../middlewares/hashPassword.js";
+import { issueJwt } from "../helpers/jwt.js";
+import jwt from "jsonwebtoken";
 
 const secretKey = process.env.JWT_SECRET;
 
 export const getUserData = async (req, res, next) => {
   try {
-    const _id = req.body._id;
+    const token = req.cookies.jwt;
 
-    const user = await User.findById(_id);
+    if (!token) {
+      const error = new Error("Token not found");
+      error.statusCode = 401;
+      throw error;
+    }
+    const decodedToken = jwt.verify(token, secretKey);
+
+    const testId = decodedToken.id;
+    const data = await User.findOne({ _id: testId });
+
+    if (!data) {
+      const error = new Error("Account not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const user = await User.findById(data._id);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -148,6 +166,7 @@ export const updateUser = async (req, res, next) => {
 export const login = async (req, res, next) => {
   try {
     const email = await User.findOne({ email: req.body.email });
+
     const username = await User.findOne({ username: req.body.username });
     const password = req.body.password;
 
@@ -156,23 +175,26 @@ export const login = async (req, res, next) => {
         .status(400)
         .json({ message: "Email or username is required!" });
     }
-
     const passwordCompare = await comparePassword(
       password,
-      searchEmail.password
+      email.password || username.password
     );
+
     if (!passwordCompare) {
       const message = "Passwort stimmt nicht!";
       res.status(404).json({ message });
     }
 
-    const token = issueJwt(searchEmail);
+    const data = email || username;
+    console.log(data);
+    const token = issueJwt(data);
     res.cookie("jwt", token, {
       httpOnly: true,
       sameSite: "none",
       secure: true,
     });
-    res.status(200).json({ email, username, token });
+
+    res.status(200).json({ data, token });
   } catch (error) {
     next(error);
   }
@@ -211,4 +233,30 @@ export const authorize = (roles = []) => {
       next();
     });
   };
+};
+
+export const getData = async (req, res, next) => {
+  try {
+    const token = req.cookies.jwt;
+
+    if (!token) {
+      const error = new Error("Token not found");
+      error.statusCode = 401;
+      throw error;
+    }
+    const decodedToken = jwt.verify(token, secretKey);
+
+    const userId = decodedToken.id;
+    const data = await User.findOne({ _id: userId });
+
+    if (!data) {
+      const error = new Error("Account not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    res.status(200).send(data);
+  } catch (error) {
+    next(error);
+  }
 };

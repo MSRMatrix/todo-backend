@@ -1,6 +1,6 @@
 import express from "express"
-import { checkTask, createTask, deleteTask, updateTask } from "../controller/taskController"
-import { taskValidator, validateRequest } from "../middlewares/validator/validatorFunctions"
+import { checkTask, createTask, deleteTask, updateTask } from "../controller/taskController.js"
+import { taskValidator, validateRequest } from "../middlewares/validator/validatorFunctions.js"
 
 const router = express.Router()
 

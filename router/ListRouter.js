@@ -1,6 +1,6 @@
 import express from "express"
-import { createList, deleteList, updateList } from "../controller/listController"
-import { listValidator, validateRequest } from "../middlewares/validator/validatorFunctions"
+import { createList, deleteList, updateList } from "../controller/listController.js"
+import { listValidator, validateRequest } from "../middlewares/validator/validatorFunctions.js"
 
 const router = express.Router()
 

@@ -1,18 +1,41 @@
-import List from "../models/List";
-import Task from "../models/Task";
-import User from "../models/User";
+import List from "../models/List.js";
+import Task from "../models/Task.js";
+import User from "../models/User.js";
+import jwt from "jsonwebtoken";
+
+const secretKey = process.env.JWT_SECRET;
 
 export const createList = async (req, res, next) => {
   try {
+    const token = req.cookies.jwt;
+
+    if (!token) {
+      const error = new Error("Token not found");
+      error.statusCode = 401;
+      throw error;
+    }
+    const decodedToken = jwt.verify(token, secretKey);
+
+    const testId = decodedToken.id;
+    const data = await User.findOne({ _id: testId });
+
+    if (!data) {
+      const error = new Error("Account not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
     const name = req.body.name.trim();
     const description = req.body.description;
-    const userId = req.body.userId;
+    const userId = data._id;
 
-    const user = await User.findById(userId)
-    const listLength = await List.find({_id : {$in: user.list}})
+    const user = await User.findById(userId);
+    const listLength = await List.find({ _id: { $in: user.list } });
 
-    if(listLength.length >= 4){
-      return res.status(518).json({message: "A maximum of 4 lists is allowed!"})
+    if (listLength.length >= 4) {
+      return res
+        .status(518)
+        .json({ message: "A maximum of 4 lists is allowed!" });
     }
 
     if (!userId) {
