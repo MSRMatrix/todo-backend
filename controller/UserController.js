@@ -95,8 +95,20 @@ export const createUser = async (req, res, next) => {
 
 export const deleteUser = async (req, res, next) => {
   try {
-    const _id = req.body._id;
-    const user = await User.findById(_id);
+
+    const token = req.cookies.jwt;
+
+    if (!token) {
+      const error = new Error("Token not found");
+      error.statusCode = 401;
+      throw error;
+    }
+    const decodedToken = jwt.verify(token, secretKey);
+
+    const testId = decodedToken.id;
+    const data = await User.findOne({ _id: testId });
+
+    const user = await User.findById(data._id);
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -111,10 +123,6 @@ export const deleteUser = async (req, res, next) => {
     }
 
     const lists = await List.find({ _id: { $in: user.list } });
-
-    if (!lists.length) {
-      return res.status(404).json({ message: "No lists found for the user" });
-    }
 
     const taskIds = lists.flatMap((list) => list.task);
 
@@ -180,23 +188,19 @@ export const login = async (req, res, next) => {
     }
 
     if (email.timeout && new Date() < new Date(email.timeout)) {
-      return res
-        .status(400)
-        .json({
-          message: "Maximum of attempts reached! Please try again in 1 hour!",
-        });
+      return res.status(400).json({
+        message: "Maximum of attempts reached! Please try again in 1 hour!",
+      });
     }
 
     if (!email.verified) {
-      const timeLimit = new Date(Date.now() - 60 * 60 * 1000);
+      const timeLimit = new Date(Date.now() - 120 * 120 * 1000);
       if (timeLimit >= email.createdAt) {
         await User.findByIdAndDelete({ _id: email._id });
-        return res
-          .status(401)
-          .json({
-            message:
-              "Account was deleted because you didnt verified your email adresse!",
-          });
+        return res.status(401).json({
+          message:
+            "Account was deleted because you didnt verified your email adresse!",
+        });
       } else {
         return res
           .status(410)
@@ -311,7 +315,6 @@ export const verifyEmail = async (req, res, next) => {
           "You have exceeded the maximum number of attempts! Please try again in 1 hour.",
       });
     }
-    
 
     if (Number(req.body.code) !== email.code) {
       email.attempts++;
@@ -321,24 +324,22 @@ export const verifyEmail = async (req, res, next) => {
         email.timeout = userTimeout;
         email.code = Math.floor(Math.random() * 900000) + 100000;
         await email.save();
-        return res
-          .status(400)
-          .json({
-            message:
-              "You have exceeded the maximum number of attempts! Please try again later.",
-          });
+        return res.status(400).json({
+          message:
+            "You have exceeded the maximum number of attempts! Please try again later.",
+        });
       }
 
       await email.save();
-      return res.status(400).json({ error: "Wrong Code! Please try again!" });
+      return res.status(400).json({ message: "Wrong Code! Please try again!" });
     }
 
     email.verified = true;
 
     await User.updateOne(
-      { email: req.body.email }, 
-      { 
-        $unset: { attempts: "", timeout: "", code: "" }
+      { email: req.body.email },
+      {
+        $unset: { attempts: "", timeout: "", code: "" },
       }
     );
 

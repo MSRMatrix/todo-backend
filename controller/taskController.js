@@ -1,6 +1,5 @@
 import List from "../models/List.js";
 import Task from "../models/Task.js";
-import User from "../models/User.js";
 
 export const createTask = async (req, res, next) => {
   try {
@@ -15,7 +14,6 @@ export const createTask = async (req, res, next) => {
     }
 
     const taskLength = await Task.find({_id : {$in: list.task}})
-console.log(taskLength.length);
     if(taskLength.length >= 4){
       return res.status(518).json({message: "A maximum of 4 tasks is allowed!"})
     }
@@ -82,7 +80,6 @@ export const deleteTask = async (req, res, next) => {
     const deletedList = await Task.findByIdAndDelete({ _id: _id });
 
     list.task = deleteTaskInList;
-console.log("test");
     await list.save();
 
    

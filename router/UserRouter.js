@@ -21,7 +21,7 @@ router
 .route("/verify").post(verifyEmail);
 
 router
-.route("/", authorize(["User"])).delete(deleteUser)
+.route("/").delete(deleteUser)
 
 router
 .route("/", authorize(["User"])).patch(userUpdateValidator([
