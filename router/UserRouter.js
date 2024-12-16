@@ -1,6 +1,6 @@
 import express from "express"
 
-import { authorize, createUser, deleteUser, getData, getUserData, login, logout, updateUser } from "../controller/UserController.js";
+import { authorize, createUser, deleteUser, getData, getUserData, login, logout, updateUser, verifyEmail } from "../controller/UserController.js";
 import { userUpdateValidator, userValidator, validateRequest } from "../middlewares/validator/validatorFunctions.js";
 
 const router = express.Router()
@@ -15,7 +15,10 @@ router
 .route("/login").post(login);
 
 router
-.route("/logout").post(logout)
+.route("/logout").post(logout);
+
+router
+.route("/verify").post(verifyEmail);
 
 router
 .route("/", authorize(["User"])).delete(deleteUser)

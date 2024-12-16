@@ -4,6 +4,11 @@ import Task from "../models/Task.js";
 import { hashPassword, comparePassword } from "../middlewares/hashPassword.js";
 import { issueJwt } from "../helpers/jwt.js";
 import jwt from "jsonwebtoken";
+import {
+  emailUpdate,
+  emailWelcome,
+  userDelete,
+} from "../helpers/nodemailer.js";
 
 const secretKey = process.env.JWT_SECRET;
 
@@ -81,7 +86,7 @@ export const createUser = async (req, res, next) => {
       email: email,
       password: req.body.password,
     });
-
+    emailWelcome(user);
     res.status(201).json({ message: "User successfully created", user: user });
   } catch (error) {
     next(error);
@@ -119,6 +124,8 @@ export const deleteUser = async (req, res, next) => {
 
     await User.findByIdAndDelete(user._id);
 
+    userDelete(user.email);
+
     res.status(200).json({ message: "User successfully deleted" });
   } catch (error) {
     next(error);
@@ -151,6 +158,7 @@ export const updateUser = async (req, res, next) => {
 
     if (email) {
       updatedUser.email = email;
+      emailUpdate(email);
     }
 
     await User.findByIdAndUpdate({ _id: updatedUser._id });
@@ -166,6 +174,35 @@ export const updateUser = async (req, res, next) => {
 export const login = async (req, res, next) => {
   try {
     const email = await User.findOne({ email: req.body.email });
+
+    if (!email) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (email.timeout && new Date() < new Date(email.timeout)) {
+      return res
+        .status(400)
+        .json({
+          message: "Maximum of attempts reached! Please try again in 1 hour!",
+        });
+    }
+
+    if (!email.verified) {
+      const timeLimit = new Date(Date.now() - 60 * 60 * 1000);
+      if (timeLimit >= email.createdAt) {
+        await User.findByIdAndDelete({ _id: email._id });
+        return res
+          .status(401)
+          .json({
+            message:
+              "Account was deleted because you didnt verified your email adresse!",
+          });
+      } else {
+        return res
+          .status(410)
+          .json({ message: "You need to verify your email adresse!" });
+      }
+    }
 
     const username = await User.findOne({ username: req.body.username });
     const password = req.body.password;
@@ -255,6 +292,59 @@ export const getData = async (req, res, next) => {
     }
 
     res.status(200).send(data);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const verifyEmail = async (req, res, next) => {
+  try {
+    const email = await User.findOne({ email: req.body.email });
+
+    if (!email) {
+      return res.status(404).json({ error: "User not found!" });
+    }
+
+    if (email.timeout && new Date() < new Date(email.timeout)) {
+      return res.status(400).json({
+        message:
+          "You have exceeded the maximum number of attempts! Please try again in 1 hour.",
+      });
+    }
+    
+
+    if (Number(req.body.code) !== email.code) {
+      email.attempts++;
+
+      if (email.attempts >= 3) {
+        const userTimeout = new Date(Date.now() + 60 * 60 * 1000);
+        email.timeout = userTimeout;
+        email.code = Math.floor(Math.random() * 900000) + 100000;
+        await email.save();
+        return res
+          .status(400)
+          .json({
+            message:
+              "You have exceeded the maximum number of attempts! Please try again later.",
+          });
+      }
+
+      await email.save();
+      return res.status(400).json({ error: "Wrong Code! Please try again!" });
+    }
+
+    email.verified = true;
+
+    await User.updateOne(
+      { email: req.body.email }, 
+      { 
+        $unset: { attempts: "", timeout: "", code: "" }
+      }
+    );
+
+    await email.save();
+
+    res.status(200).json({ message: "Profile verified!" });
   } catch (error) {
     next(error);
   }
