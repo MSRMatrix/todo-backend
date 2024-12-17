@@ -152,3 +152,103 @@ export const deleteList = async (req, res, next) => {
     next(error);
   }
 };
+
+export const resetData = async (req, res, next) => {
+  try {
+    console.log("Deleting list...");
+
+    const token = req.cookies.jwt;
+
+    if (!token) {
+      const error = new Error("Token not found");
+      error.statusCode = 401;
+      throw error;
+    }
+    const decodedToken = jwt.verify(token, secretKey);
+
+    const testId = decodedToken.id;
+    const data = await User.findOne({ _id: testId });
+
+    if (!data) {
+      const error = new Error("Account not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const userId = data._id;
+    const password = req.body.password;
+
+    const user = await User.findById(userId);
+
+    const checkPassword = await comparePassword(password, user.password);
+
+    if (!checkPassword) {
+      return res.status(401).json({ message: "Invalid password!" });
+    }
+
+    const lists = await List.find({ _id: { $in: user.list } });
+
+    const taskIds = lists.flatMap((list) => list.task);
+
+    await Task.deleteMany({ _id: { $in: taskIds } });
+
+    await List.deleteMany({ _id: { $in: user.list } });
+
+    user.list = [];
+
+    await user.save();
+
+    res.status(200).json({ message: "List deleted!" });
+  } catch (error) {
+    console.error("Error deleting list:", error);
+    next(error);
+  }
+};
+
+export const emptyList = async (req, res, next) => {
+  try {
+    const token = req.cookies.jwt;
+
+    if (!token) {
+      const error = new Error("Token not found");
+      error.statusCode = 401;
+      throw error;
+    }
+    const decodedToken = jwt.verify(token, secretKey);
+
+    const testId = decodedToken.id;
+    const data = await User.findOne({ _id: testId });
+
+    if (!data) {
+      const error = new Error("Account not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const user = data;
+    const { _id, password } = req.body;
+
+    if (!_id) {
+      return res.status(401).json({ message: "List not found!" });
+    }
+
+    const checkPassword = await comparePassword(password, user.password);
+
+    if (!checkPassword) {
+      return res.status(401).json({ message: "Invalid password!" });
+    }
+
+    const list = await List.findById({ _id: _id });
+
+    await Task.deleteMany({ _id: { $in: list.task } });
+
+    list.task = [];
+
+    await list.save();
+
+    return res.status(200).json({ message: "List has been emptied." });
+  } catch (error) {
+    console.error("Error deleting list:", error);
+    next(error);
+  }
+};

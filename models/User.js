@@ -13,6 +13,7 @@ const UserSchema = new Schema(
     attempts: { type: Number, default: 0 },
     createdAt: { type: Date, default: Date.now },
     timeout: { type: Date },
+    twoFactorAuthentication: {type: Boolean},
     role: { type: String, enum: ["User"], default: "User" },
     list: [{ type: mongoose.Schema.Types.ObjectId, ref: "List" }],
   },

@@ -7,6 +7,7 @@ import jwt from "jsonwebtoken";
 import {
   emailUpdate,
   emailWelcome,
+  newCode,
   userDelete,
 } from "../helpers/nodemailer.js";
 
@@ -44,7 +45,6 @@ export const getUserData = async (req, res, next) => {
         return Task.find({ _id: { $in: list.task } });
       })
     );
-    console.log(task[0]);
     res.status(200).json({ user: user, list: list, task: task[0] });
   } catch (error) {
     console.error("Error in getUser:", error);
@@ -95,7 +95,6 @@ export const createUser = async (req, res, next) => {
 
 export const deleteUser = async (req, res, next) => {
   try {
-
     const token = req.cookies.jwt;
 
     if (!token) {
@@ -181,61 +180,80 @@ export const updateUser = async (req, res, next) => {
 
 export const login = async (req, res, next) => {
   try {
-    const email = await User.findOne({ email: req.body.email });
+    const { email: emailInput, username: usernameInput, password } = req.body;
 
-    if (!email) {
-      return res.status(404).json({ message: "User not found" });
-    }
+    const email = await User.findOne({ email: emailInput });
+    const username = usernameInput ? await User.findOne({ username: usernameInput }) : null;
 
-    if (email.timeout && new Date() < new Date(email.timeout)) {
-      return res.status(400).json({
-        message: "Maximum of attempts reached! Please try again in 1 hour!",
+    const user = email || username;
+    if (!user) {
+      return res.status(404).json({
+        code: "USER_NOT_FOUND",
+        message: "User not found. Please check your credentials.",
       });
     }
 
-    if (!email.verified) {
-      const timeLimit = new Date(Date.now() - 120 * 120 * 1000);
-      if (timeLimit >= email.createdAt) {
-        await User.findByIdAndDelete({ _id: email._id });
-        return res.status(401).json({
+    if (user.timeout && new Date() < new Date(user.timeout)) {
+      return res.status(429).json({
+        code: "LOGIN_TIMEOUT",
+        message:
+          "You have exceeded the maximum number of attempts. Please try again in 30 minutes.",
+      });
+    }
+
+    if (!user.verified) {
+      const timeLimit = new Date(Date.now() - 120 * 60 * 1000);
+      if (timeLimit >= user.createdAt) {
+        await User.findByIdAndDelete({ _id: user._id });
+        return res.status(410).json({
+          code: "ACCOUNT_DELETED",
           message:
-            "Account was deleted because you didnt verified your email adresse!",
+            "Your account has been deleted due to not verifying your email address in time.",
         });
       } else {
-        return res
-          .status(410)
-          .json({ message: "You need to verify your email adresse!" });
+        return res.status(403).json({
+          code: "EMAIL_NOT_VERIFIED",
+          message: "You need to verify your email address before logging in.",
+        });
       }
     }
 
-    const username = await User.findOne({ username: req.body.username });
-    const password = req.body.password;
-
-    if (!email && !username) {
-      return res
-        .status(400)
-        .json({ message: "Email or username is required!" });
-    }
-    const passwordCompare = await comparePassword(
-      password,
-      email.password || username.password
-    );
-
-    if (!passwordCompare) {
-      const message = "Passwort stimmt nicht!";
-      res.status(404).json({ message });
+    const passwordIsValid = await comparePassword(password, user.password);
+    if (!passwordIsValid) {
+      return res.status(401).json({
+        code: "INVALID_PASSWORD",
+        message: "The password you entered is incorrect.",
+      });
     }
 
-    const data = email || username;
-    const token = issueJwt(data);
+    if (user.twoFactorAuthentication) {
+      user.code = Math.floor(Math.random() * 900000) + 100000; 
+      user.attempts = 0;
+      await user.save();
+
+      return res.status(420).json({
+        code: "TWO_FACTOR_REQUIRED",
+        message: "Two-factor authentication is required to complete login.",
+      });
+    }
+
+    const token = issueJwt(user);
     res.cookie("jwt", token, {
       httpOnly: true,
       sameSite: "none",
       secure: true,
     });
 
-    res.status(200).json({ data, token });
+    email.twoFactorAuthentication = false;
+    await email.save();
+    res.status(200).json({
+      code: "LOGIN_SUCCESS",
+      message: "Login successful!",
+      data: user,
+      token,
+    });
   } catch (error) {
+    console.error("Error in login:", error);
     next(error);
   }
 };
@@ -312,7 +330,7 @@ export const verifyEmail = async (req, res, next) => {
     if (email.timeout && new Date() < new Date(email.timeout)) {
       return res.status(400).json({
         message:
-          "You have exceeded the maximum number of attempts! Please try again in 1 hour.",
+          "You have exceeded the maximum number of attempts! Please try again in 30 minutes.",
       });
     }
 
@@ -320,13 +338,14 @@ export const verifyEmail = async (req, res, next) => {
       email.attempts++;
 
       if (email.attempts >= 3) {
-        const userTimeout = new Date(Date.now() + 60 * 60 * 1000);
+        const userTimeout = new Date(Date.now() + 30 * 60 * 1000);
         email.timeout = userTimeout;
         email.code = Math.floor(Math.random() * 900000) + 100000;
         await email.save();
+        newCode(email);
         return res.status(400).json({
           message:
-            "You have exceeded the maximum number of attempts! Please try again later.",
+            "You have exceeded the maximum number of attempts! Please try again in 30 minutes. You will receive a new code shortly.",
         });
       }
 
@@ -346,6 +365,54 @@ export const verifyEmail = async (req, res, next) => {
     await email.save();
 
     res.status(200).json({ message: "Profile verified!" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const twoFactorAuthentication = async (req, res, next) => {
+  try {
+    const user = await User.findOne({ email: req.body.email });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found!" });
+    }
+
+    const { code } = req.body;
+
+    if (user.timeout && new Date() < new Date(user.timeout)) {
+      return res.status(400).json({
+        message:
+          "You have exceeded the maximum number of attempts! Please try again in 30 minutes.",
+      });
+    }
+
+    if (user.attempts >= 3) {
+      user.timeout = new Date(Date.now() + 30 * 60 * 1000);
+      user.attempts = 0;
+      user.code = Math.floor(Math.random() * 900000) + 100000;
+      await user.save();
+
+      newCode(user);
+
+      return res.status(400).json({
+        message:
+          "You have exceeded the maximum number of attempts! Please try again in 30 minutes. You will receive a new code shortly.",
+      });
+    }
+
+    if (user.code !== Number(code)) {
+      user.attempts++;
+      await user.save();
+      return res.status(400).json({ message: "Wrong Code! Please try again!" });
+    }
+
+    await User.updateOne(
+      { email: req.body.email },
+      { $unset: { attempts: "", timeout: "", code: "" } }
+    );
+
+    return res.status(200).json({ message: "Code is correct!" });
   } catch (error) {
     next(error);
   }
