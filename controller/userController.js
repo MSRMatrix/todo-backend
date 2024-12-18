@@ -4,12 +4,7 @@ import Task from "../models/Task.js";
 import { hashPassword, comparePassword } from "../middlewares/hashPassword.js";
 import { issueJwt } from "../helpers/jwt.js";
 import jwt from "jsonwebtoken";
-import {
-  emailUpdate,
-  emailWelcome,
-  newCode,
-  userDelete,
-} from "../helpers/nodemailer.js";
+import { mailerFunction } from "../helpers/nodemailer.js";
 
 const secretKey = process.env.JWT_SECRET;
 
@@ -45,7 +40,13 @@ export const getUserData = async (req, res, next) => {
         return Task.find({ _id: { $in: list.task } });
       })
     );
-    res.status(200).json({ user: user, list: list, task: task[0] });
+
+    res.status(200).json({
+      user: user,
+      list: list,
+      task: task[0],
+      twoFactorAuthentication: user.twoFactorAuthentication,
+    });
   } catch (error) {
     console.error("Error in getUser:", error);
     next(error);
@@ -86,7 +87,10 @@ export const createUser = async (req, res, next) => {
       email: email,
       password: req.body.password,
     });
-    emailWelcome(user);
+    const topic = `Profile created`;
+    const message = `You created a profile! Use this code to verify your email: ${user.code}! You have 3 hours to verify your email adress!`;
+
+    mailerFunction(user, topic, message);
     res.status(201).json({ message: "User successfully created", user: user });
   } catch (error) {
     next(error);
@@ -131,7 +135,10 @@ export const deleteUser = async (req, res, next) => {
 
     await User.findByIdAndDelete(user._id);
 
-    userDelete(user.email);
+    const topic = `Profile deleted`;
+    const message = `We deleted all of your data! Goodbye!`;
+
+    mailerFunction(user, topic, message);
 
     res.status(200).json({ message: "User successfully deleted" });
   } catch (error) {
@@ -165,7 +172,10 @@ export const updateUser = async (req, res, next) => {
 
     if (email) {
       updatedUser.email = email;
-      emailUpdate(email);
+      const topic = `Profile update`;
+      const message = `Your profile was updated!`;
+
+      mailerFunction(updatedUser, topic, message);
     }
 
     await User.findByIdAndUpdate({ _id: updatedUser._id });
@@ -183,7 +193,9 @@ export const login = async (req, res, next) => {
     const { email: emailInput, username: usernameInput, password } = req.body;
 
     const email = await User.findOne({ email: emailInput });
-    const username = usernameInput ? await User.findOne({ username: usernameInput }) : null;
+    const username = usernameInput
+      ? await User.findOne({ username: usernameInput })
+      : null;
 
     const user = email || username;
     if (!user) {
@@ -197,7 +209,7 @@ export const login = async (req, res, next) => {
       return res.status(429).json({
         code: "LOGIN_TIMEOUT",
         message:
-          "You have exceeded the maximum number of attempts. Please try again in 30 minutes.",
+          "You have exceeded the maximum number of attempts. Please try again in 10 minutes.",
       });
     }
 
@@ -227,10 +239,13 @@ export const login = async (req, res, next) => {
     }
 
     if (user.twoFactorAuthentication) {
-      user.code = Math.floor(Math.random() * 900000) + 100000; 
+      user.code = Math.floor(Math.random() * 900000) + 100000;
       user.attempts = 0;
       await user.save();
+      const topic = `Two Factor Authentication Code`;
+      const message = `This is your new two factor authentication code: ${user.code}`;
 
+      mailerFunction(user, topic, message);
       return res.status(420).json({
         code: "TWO_FACTOR_REQUIRED",
         message: "Two-factor authentication is required to complete login.",
@@ -244,7 +259,6 @@ export const login = async (req, res, next) => {
       secure: true,
     });
 
-    email.twoFactorAuthentication = false;
     await email.save();
     res.status(200).json({
       code: "LOGIN_SUCCESS",
@@ -321,39 +335,44 @@ export const getData = async (req, res, next) => {
 
 export const verifyEmail = async (req, res, next) => {
   try {
-    const email = await User.findOne({ email: req.body.email });
+    const user = await User.findOne({ email: req.body.email });
 
-    if (!email) {
+    if (!user) {
       return res.status(404).json({ error: "User not found!" });
     }
 
-    if (email.timeout && new Date() < new Date(email.timeout)) {
+    if (user.timeout && new Date() < new Date(user.timeout)) {
       return res.status(400).json({
         message:
-          "You have exceeded the maximum number of attempts! Please try again in 30 minutes.",
+          "You have exceeded the maximum number of attempts! Please try again in 10 minutes.",
       });
     }
 
-    if (Number(req.body.code) !== email.code) {
-      email.attempts++;
+    if (Number(req.body.code) !== user.code) {
+      user.attempts++;
 
-      if (email.attempts >= 3) {
-        const userTimeout = new Date(Date.now() + 30 * 60 * 1000);
-        email.timeout = userTimeout;
-        email.code = Math.floor(Math.random() * 900000) + 100000;
-        await email.save();
-        newCode(email);
+      if (user.attempts >= 3) {
+        const userTimeout = new Date(Date.now() + 10 * 60 * 1000);
+        user.timeout = userTimeout;
+        user.code = Math.floor(Math.random() * 900000) + 100000;
+        await user.save();
+
+        const topic = `Email verification failed`;
+        const message = `You have exceeded the maximum number of attempts! Please try again in 10 minutes. Your new code: ${user.code}`;
+
+        mailerFunction(user, topic, message);
+
         return res.status(400).json({
           message:
-            "You have exceeded the maximum number of attempts! Please try again in 30 minutes. You will receive a new code shortly.",
+            "You have exceeded the maximum number of attempts! Please try again in 10 minutes. You will receive a new code shortly.",
         });
       }
 
-      await email.save();
+      await user.save();
       return res.status(400).json({ message: "Wrong Code! Please try again!" });
     }
 
-    email.verified = true;
+    user.verified = true;
 
     await User.updateOne(
       { email: req.body.email },
@@ -362,7 +381,21 @@ export const verifyEmail = async (req, res, next) => {
       }
     );
 
-    await email.save();
+    await user.save();
+
+    const token = issueJwt(user);
+    res.cookie("jwt", token, {
+      httpOnly: true,
+      sameSite: "none",
+      secure: true,
+    });
+
+    res.status(200).json({
+      code: "LOGIN_SUCCESS",
+      message: "Login successful!",
+      data: user,
+      token,
+    });
 
     res.status(200).json({ message: "Profile verified!" });
   } catch (error) {
@@ -370,7 +403,7 @@ export const verifyEmail = async (req, res, next) => {
   }
 };
 
-export const twoFactorAuthentication = async (req, res, next) => {
+export const testTwoFactorAuthentication = async (req, res, next) => {
   try {
     const user = await User.findOne({ email: req.body.email });
 
@@ -383,21 +416,24 @@ export const twoFactorAuthentication = async (req, res, next) => {
     if (user.timeout && new Date() < new Date(user.timeout)) {
       return res.status(400).json({
         message:
-          "You have exceeded the maximum number of attempts! Please try again in 30 minutes.",
+          "You have exceeded the maximum number of attempts! Please try again in 10 minutes.",
       });
     }
 
     if (user.attempts >= 3) {
-      user.timeout = new Date(Date.now() + 30 * 60 * 1000);
+      user.timeout = new Date(Date.now() + 10 * 60 * 1000);
       user.attempts = 0;
       user.code = Math.floor(Math.random() * 900000) + 100000;
       await user.save();
 
-      newCode(user);
+      const topic = `Profile created`;
+      const message = `You have exceeded the maximum number of attempts! Please try again in 10 minutes. Your new code: ${user.code} `;
+
+      mailerFunction(user, topic, message);
 
       return res.status(400).json({
         message:
-          "You have exceeded the maximum number of attempts! Please try again in 30 minutes. You will receive a new code shortly.",
+          "You have exceeded the maximum number of attempts! Please try again in 10 minutes. You will receive a new code shortly.",
       });
     }
 
@@ -407,12 +443,70 @@ export const twoFactorAuthentication = async (req, res, next) => {
       return res.status(400).json({ message: "Wrong Code! Please try again!" });
     }
 
-    await User.updateOne(
-      { email: req.body.email },
+    await User.findByIdAndUpdate(
+      { _id: user._id },
       { $unset: { attempts: "", timeout: "", code: "" } }
     );
 
-    return res.status(200).json({ message: "Code is correct!" });
+    const token = issueJwt(user);
+    res.cookie("jwt", token, {
+      httpOnly: true,
+      sameSite: "none",
+      secure: true,
+    });
+
+    await user.save();
+    res.status(200).json({
+      code: "LOGIN_SUCCESS",
+      message: "Login successful!",
+      data: user,
+      token,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const toggleTwoFactorAuthentication = async (req, res, next) => {
+  try {
+    const token = req.cookies.jwt;
+
+    if (!token) {
+      const error = new Error("Token not found");
+      error.statusCode = 401;
+      throw error;
+    }
+    const decodedToken = jwt.verify(token, secretKey);
+
+    const testId = decodedToken.id;
+    const user = await User.findOne({ _id: testId });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found!" });
+    }
+
+    const { password } = req.body;
+
+    const passwordIsValid = await comparePassword(password, user.password);
+    if (!passwordIsValid) {
+      return res.status(401).json({
+        code: "INVALID_PASSWORD",
+        message: "The password you entered is incorrect.",
+      });
+    }
+
+    user.twoFactorAuthentication = !user.twoFactorAuthentication;
+    user.attempts = 0;
+    await user.save();
+
+    const message = `Two Factor Authentication ${
+      user.twoFactorAuthentication ? "activated" : "deactivated"
+    }`;
+
+    return res.status(200).json({
+      message: message,
+      twoFactorAuthentication: user.twoFactorAuthentication,
+    });
   } catch (error) {
     next(error);
   }

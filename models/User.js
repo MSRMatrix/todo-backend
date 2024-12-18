@@ -29,6 +29,7 @@ UserSchema.methods.toJSON = function () {
   delete user.code;
   delete user.attempts;
   delete user.timeout;
+  delete user.twoFactorAuthentication;
   return user;
 };
 
