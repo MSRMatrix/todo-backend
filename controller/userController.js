@@ -5,22 +5,13 @@ import { hashPassword, comparePassword } from "../middlewares/hashPassword.js";
 import { issueJwt } from "../helpers/jwt.js";
 import jwt from "jsonwebtoken";
 import { mailerFunction } from "../helpers/nodemailer.js";
+import { dataFunction } from "../helpers/dataFunction.js";
 
 const secretKey = process.env.JWT_SECRET;
 
 export const getUserData = async (req, res, next) => {
   try {
-    const token = req.cookies.jwt;
-
-    if (!token) {
-      const error = new Error("Token not found");
-      error.statusCode = 401;
-      throw error;
-    }
-    const decodedToken = jwt.verify(token, secretKey);
-
-    const testId = decodedToken.id;
-    const data = await User.findOne({ _id: testId });
+    const data = await dataFunction(req, res, next);
 
     if (!data) {
       const error = new Error("Account not found");
@@ -48,7 +39,6 @@ export const getUserData = async (req, res, next) => {
       twoFactorAuthentication: user.twoFactorAuthentication,
     });
   } catch (error) {
-    console.error("Error in getUser:", error);
     next(error);
   }
 };
@@ -99,17 +89,7 @@ export const createUser = async (req, res, next) => {
 
 export const deleteUser = async (req, res, next) => {
   try {
-    const token = req.cookies.jwt;
-
-    if (!token) {
-      const error = new Error("Token not found");
-      error.statusCode = 401;
-      throw error;
-    }
-    const decodedToken = jwt.verify(token, secretKey);
-
-    const testId = decodedToken.id;
-    const data = await User.findOne({ _id: testId });
+    const data = await dataFunction(req, res, next);
 
     const user = await User.findById(data._id);
 
@@ -148,7 +128,7 @@ export const deleteUser = async (req, res, next) => {
 
 export const updateUser = async (req, res, next) => {
   try {
-    const updatedUser = await User.findById({ _id: req.body.id });
+    const updatedUser = await dataFunction(req, res, next);
     const username = req.body.username.trim().toLowerCase();
     const email = req.body.email.trim().toLowerCase();
     const password = req.body.password.trim();
@@ -190,14 +170,11 @@ export const updateUser = async (req, res, next) => {
 
 export const login = async (req, res, next) => {
   try {
-    const { email: emailInput, username: usernameInput, password } = req.body;
+    const { email, username, password } = req.body;
 
-    const email = await User.findOne({ email: emailInput });
-    const username = usernameInput
-      ? await User.findOne({ username: usernameInput })
-      : null;
-
-    const user = email || username;
+    const user =
+      (await User.findOne({ email: email })) ||
+      (await User.findOne({ username: username }));
     if (!user) {
       return res.status(404).json({
         code: "USER_NOT_FOUND",
@@ -252,6 +229,13 @@ export const login = async (req, res, next) => {
       });
     }
 
+    await User.updateOne(
+      { email: req.body.email },
+      {
+        $unset: { attempts: "", timeout: "", code: "" },
+      }
+    );
+
     const token = issueJwt(user);
     res.cookie("jwt", token, {
       httpOnly: true,
@@ -259,7 +243,7 @@ export const login = async (req, res, next) => {
       secure: true,
     });
 
-    await email.save();
+    await user.save();
     res.status(200).json({
       code: "LOGIN_SUCCESS",
       message: "Login successful!",
@@ -267,7 +251,6 @@ export const login = async (req, res, next) => {
       token,
     });
   } catch (error) {
-    console.error("Error in login:", error);
     next(error);
   }
 };
@@ -309,17 +292,7 @@ export const authorize = (roles = []) => {
 
 export const getData = async (req, res, next) => {
   try {
-    const token = req.cookies.jwt;
-
-    if (!token) {
-      const error = new Error("Token not found");
-      error.statusCode = 401;
-      throw error;
-    }
-    const decodedToken = jwt.verify(token, secretKey);
-
-    const userId = decodedToken.id;
-    const data = await User.findOne({ _id: userId });
+    const data = await dataFunction(req, res, next);
 
     if (!data) {
       const error = new Error("Account not found");
@@ -469,17 +442,7 @@ export const testTwoFactorAuthentication = async (req, res, next) => {
 
 export const toggleTwoFactorAuthentication = async (req, res, next) => {
   try {
-    const token = req.cookies.jwt;
-
-    if (!token) {
-      const error = new Error("Token not found");
-      error.statusCode = 401;
-      throw error;
-    }
-    const decodedToken = jwt.verify(token, secretKey);
-
-    const testId = decodedToken.id;
-    const user = await User.findOne({ _id: testId });
+    const user = await dataFunction(req, res, next);
 
     if (!user) {
       return res.status(404).json({ message: "User not found!" });
