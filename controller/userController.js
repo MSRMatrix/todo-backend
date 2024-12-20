@@ -272,17 +272,21 @@ export const logout = async (req, res, next) => {
 
 export const authorize = (roles = []) => {
   return (req, res, next) => {
-    const role = req.headers["authorization"];
-
     const token = req.cookies.jwt;
     if (!token) {
       return res.status(401).send("Access denied. No token provided.");
     }
+
     jwt.verify(token, secretKey, (error, decoded) => {
       if (error) return res.status(401).json({ error: "Invalid token." });
 
-      if (!roles.includes(role))
-        return res.status(404).json({ error: "Role is missing!" });
+      const userRole = decoded.role;
+
+      if (!roles.includes(userRole)) {
+        return res
+          .status(403)
+          .json({ error: "Access denied. Insufficient permissions." });
+      }
 
       req.user = decoded;
       next();

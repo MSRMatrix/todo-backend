@@ -6,7 +6,7 @@ import { userUpdateValidator, userValidator, validateRequest } from "../middlewa
 const router = express.Router()
 
 router
-.route("/").get(getUserData)
+.route("/", authorize(["User"])).get(getUserData)
 
 router
 .route("/").post(userValidator, validateRequest ,createUser)
@@ -24,10 +24,10 @@ router
 .route("/test-two-factor-authentication").post(testTwoFactorAuthentication)
 
 router
-.route("/toggle-two-factor-authentication").post(toggleTwoFactorAuthentication)
+.route("/toggle-two-factor-authentication", authorize(["User"])).post(toggleTwoFactorAuthentication)
 
 router
-.route("/").delete(deleteUser)
+.route("/", authorize(["User"])).delete(deleteUser)
 
 router
 .route("/", authorize(["User"])).patch(userUpdateValidator([

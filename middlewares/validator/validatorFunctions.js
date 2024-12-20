@@ -97,3 +97,49 @@ export const userUpdateValidator = (fieldsToUpdate) => {
 
   return validators;
 };
+
+
+export const taskUpdateValidator = (fieldsToUpdate) => {
+  const validators = [];
+
+  if (fieldsToUpdate.includes("task")) {
+    validators.push(
+      body("task")
+        .if(body("task").exists({ checkFalsy: true }))
+        .trim()
+        .isString()
+        .notEmpty()
+        .escape()
+    );
+  }
+
+  return validators;
+};
+
+export const listUpdateValidator = (fieldsToUpdate) => {
+  const validators = [];
+
+  if (fieldsToUpdate.includes("name")) {
+    validators.push(
+      body("name")
+        .if(body("name").exists({ checkFalsy: true }))
+        .trim()
+        .isString()
+        .notEmpty()
+        .escape()
+    );
+  }
+
+  if (fieldsToUpdate.includes("description")) {
+    validators.push(
+      body("description")
+        .if(body("description").exists({ checkFalsy: true }))
+        .trim()
+        .isString()
+        .notEmpty()
+        .escape()
+    );
+  }
+
+  return validators;
+};

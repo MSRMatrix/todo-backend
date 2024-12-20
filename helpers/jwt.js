@@ -5,7 +5,8 @@ const jwtSecret = process.env.JWT_SECRET
 
 export function issueJwt(user) {
     const payload = {
-        id: user._id
+        id: user._id,
+        role: user.role
     }
 
     return jwt.sign(payload, jwtSecret, {expiresIn: "10h"})
@@ -24,4 +25,3 @@ export function verifyToken(req, res, next) {
      next();
   });
  }
- 

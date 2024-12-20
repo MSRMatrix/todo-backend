@@ -1,6 +1,6 @@
 import express from "express"
 import { checkTask, createTask, deleteTask, updateTask } from "../controller/taskController.js"
-import { taskValidator, validateRequest } from "../middlewares/validator/validatorFunctions.js"
+import { taskUpdateValidator, taskValidator, validateRequest } from "../middlewares/validator/validatorFunctions.js"
 
 const router = express.Router()
 
@@ -13,6 +13,6 @@ router
 router
 .route("/check").patch(checkTask)
 
-router.route("/update").patch(taskValidator, validateRequest ,updateTask)
+router.route("/update").patch(taskUpdateValidator(["task"]), validateRequest ,updateTask)
 
 export default router;

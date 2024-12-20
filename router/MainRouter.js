@@ -10,15 +10,9 @@ router
 .use("/user", UserRouter)
 
 router
-.use("/list", ListRouter)
+.use("/list", authorize(["User"]), ListRouter)
 
 router
-.use("/task", TaskRouter)
+.use("/task", authorize(["User"]), TaskRouter)
 
 export default router;
-
-// router
-// .use("/list", authorize(["User"]), ListRouter)
-
-// router
-// .use("/task", authorize(["User"]), TaskRouter)

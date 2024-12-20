@@ -70,20 +70,26 @@ export const createList = async (req, res, next) => {
 
 export const updateList = async (req, res, next) => {
   try {
-    const { name, _id, description } = req.body;
+    const { name, _id, description, oldList } = req.body;
 
-    const updateList = await List.findById(_id);
+    const updateList = await List.findById(_id); 
+
+    const newList = name;
+    
+    if (newList === oldList) {
+      return console.log(`Name is equal!`);
+    }
 
     if (!updateList) {
       return res.status(404).json({ message: "List not found!" });
     }
 
-    if (description) {
+    if (description || description !== updateList.description) {
       updateList.description = description.trim();
     }
 
     if (name) {
-      updateList.name = name;
+      updateList.name = newList;
     }
 
     await updateList.save();
