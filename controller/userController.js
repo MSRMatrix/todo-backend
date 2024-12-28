@@ -464,7 +464,12 @@ export const toggleTwoFactorAuthentication = async (req, res, next) => {
 
     user.twoFactorAuthentication = !user.twoFactorAuthentication;
     user.attempts = 0;
-    await user.save();
+    await user.save(); 
+    
+    await User.findByIdAndUpdate(
+      { _id: user._id },
+      { $unset: { code: "" } }
+    );
 
     const message = `Two Factor Authentication ${
       user.twoFactorAuthentication ? "activated" : "deactivated"

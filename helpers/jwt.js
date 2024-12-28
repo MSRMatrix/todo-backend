@@ -9,8 +9,10 @@ export function issueJwt(user) {
         role: user.role
     }
 
-    return jwt.sign(payload, jwtSecret, {expiresIn: "10h"})
+    return jwt.sign(payload, jwtSecret)
 }
+
+// return jwt.sign(payload, jwtSecret, {expiresIn: "10h"})
 
 export function verifyToken(req, res, next) {
   const token = req.cookies.jwt;
@@ -25,3 +27,5 @@ export function verifyToken(req, res, next) {
      next();
   });
  }
+
+
