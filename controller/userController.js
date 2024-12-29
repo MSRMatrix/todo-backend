@@ -128,41 +128,44 @@ export const deleteUser = async (req, res, next) => {
 
 export const updateUser = async (req, res, next) => {
   try {
-    const updatedUser = await dataFunction(req, res, next);
+    const user = await dataFunction(req, res, next);
     const username = req.body.username.trim().toLowerCase();
     const email = req.body.email.trim().toLowerCase();
     const password = req.body.password.trim();
+    const confirmPassword = req.body.confirmPassword.trim();
 
     const checkPassword = await comparePassword(
-      req.body.password,
-      updateUser.password
+      confirmPassword,
+      user.password
     );
 
     if (!checkPassword) {
       return res.status(404).json({ message: "Wrong password" });
     }
 
-    if (username.length > 8) {
-      updatedUser.username = username;
+    if (username.length >= 8) {
+      user.username = username;
     }
 
-    if (password.length > 8) {
-      updatedUser.password = password;
+    if (password.length >= 8) { 
+      user.password = await hashPassword(password);
+
+      
     }
 
     if (email) {
-      updatedUser.email = email;
+      user.email = email;
       const topic = `Profile update`;
       const message = `Your profile was updated!`;
 
-      mailerFunction(updatedUser, topic, message);
+      mailerFunction(user, topic, message);
     }
 
-    await User.findByIdAndUpdate({ _id: updatedUser._id });
+    await user.save()
 
     res
       .status(200)
-      .json({ message: "User successfully updated", updatedUser: updatedUser });
+      .json({ message: "User successfully updated", user: user });
   } catch (error) {
     next(error);
   }
