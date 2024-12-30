@@ -134,10 +134,7 @@ export const updateUser = async (req, res, next) => {
     const password = req.body.password.trim();
     const confirmPassword = req.body.confirmPassword.trim();
 
-    const checkPassword = await comparePassword(
-      confirmPassword,
-      user.password
-    );
+    const checkPassword = await comparePassword(confirmPassword, user.password);
 
     if (!checkPassword) {
       return res.status(404).json({ message: "Wrong password" });
@@ -145,27 +142,28 @@ export const updateUser = async (req, res, next) => {
 
     if (username.length >= 8) {
       user.username = username;
+      const topic = `Profile update`;
+      const message = `Your username was updated!`;
+      mailerFunction(user, topic, message);
     }
 
-    if (password.length >= 8) { 
+    if (password.length >= 8) {
       user.password = await hashPassword(password);
-
-      
+      const topic = `Profile update`;
+      const message = `Your password was updated!`;
+      mailerFunction(user, topic, message);
     }
 
     if (email) {
       user.email = email;
       const topic = `Profile update`;
-      const message = `Your profile was updated!`;
-
+      const message = `Your email was updated!`;
       mailerFunction(user, topic, message);
     }
 
-    await user.save()
+    await user.save();
 
-    res
-      .status(200)
-      .json({ message: "User successfully updated", user: user });
+    res.status(200).json({ message: "User successfully updated", user: user });
   } catch (error) {
     next(error);
   }
@@ -467,12 +465,9 @@ export const toggleTwoFactorAuthentication = async (req, res, next) => {
 
     user.twoFactorAuthentication = !user.twoFactorAuthentication;
     user.attempts = 0;
-    await user.save(); 
-    
-    await User.findByIdAndUpdate(
-      { _id: user._id },
-      { $unset: { code: "" } }
-    );
+    await user.save();
+
+    await User.findByIdAndUpdate({ _id: user._id }, { $unset: { code: "" } });
 
     const message = `Two Factor Authentication ${
       user.twoFactorAuthentication ? "activated" : "deactivated"
