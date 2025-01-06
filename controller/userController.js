@@ -315,6 +315,12 @@ export const verifyEmail = async (req, res, next) => {
   try {
     const user = await User.findOne({ email: req.body.email });
 
+    if (user.verified) {
+      return res.status(400).json({
+        message: "Email already verified!",
+      });
+    }
+
     if (!user) {
       return res.status(404).json({ error: "User not found!" });
     }
