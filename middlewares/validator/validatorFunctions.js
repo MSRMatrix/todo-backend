@@ -29,10 +29,10 @@ export const userValidator = [
     .escape(),
   body("email")
     .notEmpty()
-    .withMessage("Password is required!")
+    .withMessage("Email is required!")
     .trim()
     .isEmail()
-    .withMessage("Password must be legit!")
+    .withMessage("Email must be legit!")
     .normalizeEmail()
     .escape(),
 ];
