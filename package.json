@@ -38,7 +38,7 @@
   "private": false,
   "scripts": {
     "dev": "bun --watch server.js",
-    "start": "bun --watch server.js"
+    "start": "bun server.js"
   },
   "type": "module"
 }
