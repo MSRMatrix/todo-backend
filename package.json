@@ -37,8 +37,8 @@
   "license": "AGPL-version-3.0",
   "private": false,
   "scripts": {
-    "dev": "",
-    "test": ""
+    "dev": "bun --watch server.js",
+    "start": "bun --watch server.js"
   },
   "type": "module"
 }
