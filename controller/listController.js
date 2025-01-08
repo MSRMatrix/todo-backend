@@ -50,7 +50,6 @@ export const createList = async (req, res, next) => {
     if (!description) {
       req.body.description = "No description";
     }
-
     const newList = await List.create({
       name: name,
       description: req.body.description,

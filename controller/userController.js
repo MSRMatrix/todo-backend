@@ -31,11 +31,10 @@ export const getUserData = async (req, res, next) => {
         return Task.find({ _id: { $in: list.task } });
       })
     );
-
     res.status(200).json({
       user: user,
       list: list,
-      task: task[0],
+      task: task.flat(),
       twoFactorAuthentication: user.twoFactorAuthentication,
     });
   } catch (error) {
@@ -76,6 +75,8 @@ export const createUser = async (req, res, next) => {
       username: username,
       email: email,
       password: req.body.password,
+      attempts: 0 ,
+      code: Math.floor(Math.random() * 900000) + 100000,
     });
     const topic = `Profile created`;
     const message = `You created a profile! Use this code to verify your email: ${user.code}! You have 3 hours to verify your email adress!`;
