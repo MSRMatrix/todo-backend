@@ -5,7 +5,7 @@ import 'dotenv/config';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 
-import MainRouter from "./router/MainRouter"
+import MainRouter from "./router/MainRouter.js"
 import { invalid } from "./middlewares/invalid"
 import { errorHandler } from "./middlewares/errorHandler"
 
