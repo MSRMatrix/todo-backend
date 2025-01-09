@@ -75,7 +75,7 @@ export const createUser = async (req, res, next) => {
       username: username,
       email: email,
       password: req.body.password,
-      attempts: 0 ,
+      attempts: 0,
       code: Math.floor(Math.random() * 900000) + 100000,
     });
     const topic = `Profile created`;
@@ -314,10 +314,18 @@ export const getData = async (req, res, next) => {
 
 export const verifyEmail = async (req, res, next) => {
   try {
-    const user = await User.findOne({ email: req.body.email });
+    const user = await User.findOne({
+      $or: [{ email: req.body.email }, { username: req.body.username }],
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        message: "User not found!",
+      });
+    }
 
     if (user.verified) {
-      return res.status(400).json({
+      return res.status(418).json({
         message: "Email already verified!",
       });
     }
@@ -390,7 +398,9 @@ export const verifyEmail = async (req, res, next) => {
 
 export const testTwoFactorAuthentication = async (req, res, next) => {
   try {
-    const user = await User.findOne({ email: req.body.email });
+    const user = await User.findOne({
+      $or: [{ email: req.body.email }, { username: req.body.username }],
+    });
 
     if (!user) {
       return res.status(404).json({ message: "User not found!" });
