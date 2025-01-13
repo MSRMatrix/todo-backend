@@ -56,12 +56,13 @@ export const createList = async (req, res, next) => {
       userId: userId,
     });
 
-    const populatedList = await List.findById(newList._id).populate("userId");
+    // const populatedList = await List.findById(newList._id).populate("userId");
+    
     await User.findByIdAndUpdate(userId, { $push: { list: newList._id } });
 
     res
       .status(200)
-      .json({ message: "List created!", populatedList: populatedList });
+      .json({ message: "List created!" });
   } catch (error) {
     next(error);
   }

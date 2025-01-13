@@ -1,4 +1,6 @@
-import { Schema, model } from "mongoose";
+import mongoose ,{ Schema, model } from "mongoose";
+
+const TodoWaveDb = mongoose.connection.useDb('TodoWave');
 
 const TaskSchema = new Schema({
     task: {type: String},
@@ -11,6 +13,6 @@ TaskSchema.methods.toJSON = function() {
     return task;
   }
 
-const Task = model("Task", TaskSchema)
+const Task = TodoWaveDb.model("Task", TaskSchema)
 
 export default Task;

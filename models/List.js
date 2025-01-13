@@ -1,5 +1,7 @@
 import mongoose, { Schema, model } from "mongoose";
 
+const TodoWaveDb = mongoose.connection.useDb('TodoWave');
+
 const ListSchema = new Schema(
   {
     name: { type: String, required: true },
@@ -16,6 +18,6 @@ ListSchema.methods.toJSON = function () {
   return list;
 };
 
-const List = model("List", ListSchema);
+const List = TodoWaveDb.model("List", ListSchema);
 
 export default List;

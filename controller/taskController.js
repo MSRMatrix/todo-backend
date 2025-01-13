@@ -20,11 +20,11 @@ export const createTask = async (req, res, next) => {
 
     const newTask = await Task.create({ task: task, listId: listId });
 
-    const populatedTask = await Task.findById(newTask._id).populate("listId");
+    // const populatedTask = await Task.findById(newTask._id).populate("listId");
 
     await List.findByIdAndUpdate(listId, { $push: { task: newTask._id } });
 
-    res.status(200).json({ message: "Task created!", name: populatedTask });
+    res.status(200).json({ message: "Task created!" });
   } catch (error) {
     next(error);
   }
