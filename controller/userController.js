@@ -498,3 +498,19 @@ export const toggleTwoFactorAuthentication = async (req, res, next) => {
     next(error);
   }
 };
+
+export const TestEmailOrUsername = async(req, res, next) =>{
+  try{
+    const email = await User.findOne({ email: req.body.email });
+    const username = await User.findOne({ username: req.body.username});
+    if(!username){
+      return res.status(420).json({message: "Username exists!"})
+    }
+    if(!email){
+      return res.status(420).json({message: "Email exists!"})
+    }
+      return res.status(200).json({message: "Data is available!"})
+  }catch(error){
+    next(error);
+  }
+}
