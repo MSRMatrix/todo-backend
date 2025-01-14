@@ -36,7 +36,7 @@ export const updateTask = async (req, res, next) => {
 
     const newTask = task;
 
-    if(!newTask){
+    if (!newTask) {
       return res.status(400).json({ message: "A task need a name!" });
     }
 
@@ -100,6 +100,37 @@ export const deleteTask = async (req, res, next) => {
     await list.save();
 
     res.status(200).json({ message: "Task deleted!", name: deletedList });
+  } catch (error) {
+    next(error);
+  }
+};
+export const toggleAllTasks = async (req, res, next) => {
+  try {
+    const _id = req.body._id;
+const list = await List.findById(_id);
+
+if (!list) {
+  return res.status(404).json({ message: "List not found" });
+}
+
+const tasks = await Task.find({ _id: { $in: list.task } });
+
+const hasIncompleteTask = tasks.some(task => task.done === false);
+
+if (hasIncompleteTask) {
+  await Task.updateMany(
+    { _id: { $in: list.task } },
+    { $set: { done: true } }
+  );
+  return res.status(200).json({ message: "All tasks have been marked as complete!" });
+} else {
+  await Task.updateMany(
+    { _id: { $in: list.task } },
+    { $set: { done: false } }
+  );
+  return res.status(200).json({ message: "All tasks have been marked as incomplete!" });
+}
+
   } catch (error) {
     next(error);
   }
