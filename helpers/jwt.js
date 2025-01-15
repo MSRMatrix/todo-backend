@@ -9,7 +9,7 @@ export function issueJwt(user) {
         role: user.role
     }
 
-    return jwt.sign(payload, jwtSecret)
+    return jwt.sign(payload, jwtSecret, {expiresIn: "96h"})
 }
 
 // return jwt.sign(payload, jwtSecret, {expiresIn: "10h"})

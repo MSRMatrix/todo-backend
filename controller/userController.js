@@ -14,9 +14,7 @@ export const getUserData = async (req, res, next) => {
     const data = await dataFunction(req, res, next);
 
     if (!data) {
-      const error = new Error("Account not found");
-      error.statusCode = 404;
-      throw error;
+      return res.status(404).json({ message: "Data not found" });
     }
 
     const user = await User.findById(data._id);
