@@ -1,6 +1,9 @@
 import mongoose ,{ Schema, model } from "mongoose";
 
-const TodoWaveDb = mongoose.connection.useDb('TodoWave');
+
+const Database = process.env.DATABASE;
+
+const TodoWaveDb = mongoose.connection.useDb(Database);
 
 const TaskSchema = new Schema({
     task: {type: String},
