@@ -77,7 +77,7 @@ export const updateList = async (req, res, next) => {
     const newList = name;
     
     if (newList === oldList) {
-      return console.log(`Name is equal!`);
+      return res.status(200).json({ message: "Name is equal!" });
     }
 
     if (!updateList) {

@@ -41,7 +41,7 @@ export const updateTask = async (req, res, next) => {
     }
 
     if (newTask.trim() === oldTask) {
-      return res.status(400).json({ message: "Task name can't be the same!" });
+      return res.status(200).json({ message: "Task name can't be the same!" });
     }
 
     await Task.findByIdAndUpdate(
