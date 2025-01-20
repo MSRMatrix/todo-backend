@@ -6,6 +6,7 @@ import { issueJwt } from "../helpers/jwt.js";
 import jwt from "jsonwebtoken";
 import { mailerFunction } from "../helpers/nodemailer.js";
 import { dataFunction } from "../helpers/dataFunction.js";
+import he from "he"
 
 const secretKey = process.env.JWT_SECRET;
 
@@ -42,7 +43,7 @@ export const getUserData = async (req, res, next) => {
 
 export const createUser = async (req, res, next) => {
   try {
-    const username = req.body.username.trim().toLowerCase();
+    const username = he.decode(req.body.username).trim().toLowerCase();
     const email = req.body.email.trim().toLowerCase();
     const password = req.body.password.trim();
 
@@ -128,7 +129,7 @@ export const deleteUser = async (req, res, next) => {
 export const updateUser = async (req, res, next) => {
   try {
     const user = await dataFunction(req, res, next);
-    const username = req.body.username.trim().toLowerCase();
+    const username = he.decode(req.body.username).trim().toLowerCase();
     const email = req.body.email.trim().toLowerCase();
     const password = req.body.password.trim();
     const confirmPassword = req.body.confirmPassword.trim();
@@ -320,6 +321,17 @@ export const verifyEmail = async (req, res, next) => {
       return res.status(400).json({
         message: "User not found!",
       });
+    }
+
+    if(!user.verified){
+      if (timeLimit >= user.createdAt) {
+        await User.findByIdAndDelete({ _id: user._id });
+        return res.status(410).json({
+          code: "ACCOUNT_DELETED",
+          message:
+            "Your account has been deleted due to not verifying your email address in time.",
+        });
+      } 
     }
 
     if (user.verified) {

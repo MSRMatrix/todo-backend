@@ -1,9 +1,10 @@
 import List from "../models/List.js";
 import Task from "../models/Task.js";
+import he from "he"
 
 export const createTask = async (req, res, next) => {
   try {
-    const task = req.body.task;
+    const task = he.decode(req.body.task).trim();
     const listId = req.body.listId;
     const list = await List.findById(listId);
 
@@ -34,7 +35,7 @@ export const updateTask = async (req, res, next) => {
   try {
     const { _id, task, oldTask } = req.body;
 
-    const newTask = task;
+    const newTask = he.decode(task).trim();
 
     if (!newTask) {
       return res.status(400).json({ message: "A task need a name!" });

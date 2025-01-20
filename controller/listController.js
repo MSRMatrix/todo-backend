@@ -3,6 +3,7 @@ import List from "../models/List.js";
 import Task from "../models/Task.js";
 import User from "../models/User.js";
 import jwt from "jsonwebtoken";
+import he from "he"
 
 const secretKey = process.env.JWT_SECRET;
 
@@ -26,7 +27,7 @@ export const createList = async (req, res, next) => {
       throw error;
     }
 
-    const name = req.body.name.trim();
+    const name = he.decode(req.body.name).trim();
     const description = req.body.description;
     const userId = data._id;
 
@@ -68,14 +69,16 @@ export const createList = async (req, res, next) => {
   }
 };
 
+
 export const updateList = async (req, res, next) => {
   try {
     const { name, _id, description, oldList } = req.body;
 
     const updateList = await List.findById(_id); 
 
-    const newList = name;
-    
+    const newList = he.decode(name).trim();
+
+
     if (newList === oldList) {
       return res.status(200).json({ message: "Name is equal!" });
     }
