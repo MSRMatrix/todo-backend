@@ -87,8 +87,12 @@ export const updateList = async (req, res, next) => {
       return res.status(404).json({ message: "List not found!" });
     }
 
-    if (description || description !== updateList.description) {
+    if (description.trim().length > 0 || description !== updateList.description) {
       updateList.description = description.trim();
+    }
+
+    if(description.trim().length <= 0 && updateList.description !== "No description"){
+      updateList.description = "No description"
     }
 
     if (name) {

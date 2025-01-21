@@ -9,7 +9,7 @@ router
 .route("/", authorize(["User"])).get(getUserData)
 
 router
-.route("/").post(userValidator, validateRequest ,createUser)
+.route("/").post(userValidator, validateRequest , createUser)
 
 router
 .route("/login").post(login);

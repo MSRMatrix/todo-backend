@@ -12,7 +12,7 @@ export function issueJwt(user) {
     return jwt.sign(payload, jwtSecret, {expiresIn: "96h"})
 }
 
-// return jwt.sign(payload, jwtSecret, {expiresIn: "10h"})
+// return jwt.sign(payload, jwtSecret)
 
 export function verifyToken(req, res, next) {
   const token = req.cookies.jwt;

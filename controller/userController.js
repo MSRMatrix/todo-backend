@@ -195,7 +195,7 @@ export const login = async (req, res, next) => {
       const timeLimit = new Date(Date.now() - 120 * 60 * 1000);
       if (timeLimit >= user.createdAt) {
         await User.findByIdAndDelete({ _id: user._id });
-        return res.status(410).json({
+        return res.status(418).json({
           code: "ACCOUNT_DELETED",
           message:
             "Your account has been deleted due to not verifying your email address in time.",
@@ -326,7 +326,7 @@ export const verifyEmail = async (req, res, next) => {
     if(!user.verified){
       if (timeLimit >= user.createdAt) {
         await User.findByIdAndDelete({ _id: user._id });
-        return res.status(410).json({
+        return res.status(418).json({
           code: "ACCOUNT_DELETED",
           message:
             "Your account has been deleted due to not verifying your email address in time.",

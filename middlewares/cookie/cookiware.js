@@ -4,7 +4,7 @@ export const checkCookie = async (req, res, next) => {
       if (cookie) {   
         next()
       } else {
-        res.status(404).send("Cookie nicht gefunden");
+        res.status(404).send("Cookie not found!");
       }
     } catch (error) {
       next(error);
