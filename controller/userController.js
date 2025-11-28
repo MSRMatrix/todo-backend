@@ -313,6 +313,7 @@ export const getData = async (req, res, next) => {
 
 export const verifyEmail = async (req, res, next) => {
   try {
+    
     const user = await User.findOne({
       $or: [{ email: req.body.email }, { username: req.body.username }],
     });
@@ -322,8 +323,9 @@ export const verifyEmail = async (req, res, next) => {
         message: "User not found!",
       });
     }
-
+   
     if(!user.verified){
+      const timeLimit = new Date(Date.now() - 120 * 60 * 1000);
       if (timeLimit >= user.createdAt) {
         await User.findByIdAndDelete({ _id: user._id });
         return res.status(418).json({
@@ -333,6 +335,7 @@ export const verifyEmail = async (req, res, next) => {
         });
       } 
     }
+
 
     if (user.verified) {
       return res.status(418).json({
@@ -399,8 +402,6 @@ export const verifyEmail = async (req, res, next) => {
       data: user,
       token,
     });
-
-    res.status(200).json({ message: "Profile verified!" });
   } catch (error) {
     next(error);
   }
